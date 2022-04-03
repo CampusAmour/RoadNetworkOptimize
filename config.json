@@ -1,0 +1,10 @@
+{
+    "alpha": 0.61,
+    "beta": 1.653,
+    "cross_rate": 0.5,
+    "mutated_rate": 0.05,
+    "population_size": 50,
+    "epoch": 10,
+    "k_path_num": 20,
+    "road_rate": 0.8
+}
