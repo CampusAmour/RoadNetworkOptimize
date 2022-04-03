@@ -6,35 +6,6 @@ from utils.build import createGraph, createCars
 from utils.method import greedyGenerateCarDepartureTime, writeCarData, writeRoadData
 
 
-# def main():
-#     road_info_path = "./input_data/road_info.xlsx"
-#     graph = createGraph(road_info_path)
-#     car_info_path = "./input_data/car_info.xlsx"
-#     start_time = time.time()
-#     cars = createCars(car_info_path, graph)
-#     end_time = time.time()
-#     print("create cars spend time:", end_time - start_time)
-#     road_pipelines, max_length = greedyGenerateCarDepartureTime(graph, cars)
-#     simulator = Simulator(graph)
-#     print(simulator.action(cars))
-#     a = input("ddd")
-#     #
-#     #
-#     json_path = "./config.json"
-#     data = parseJsonFile(json_path)
-#     population_size = data["population_size"]
-#     ga = GeneticAlgorithm(graph, population_size, car_info_path)
-#     ga.generatePopulation()
-#     # ga.test()
-#     ga.execute()
-#
-#     print("total spend time:", time.time() - start_time)
-#
-#     ### wirte data ###
-#     writeCarData(cars, "./result/car_result_"+time.strftime("%Y-%m-%d-%H-%M",time.localtime())+".xlsx")
-#     writeRoadData(graph.edge_table, road_pipelines, max_length, "./result/road_result_"+time.strftime("%Y-%m-%d-%H-%M",time.localtime())+".xlsx")
-
-
 def way_one():
     """
         遗传算法

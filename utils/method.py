@@ -17,7 +17,6 @@ from utils.logger import Logger
 
 logger = Logger("log").getLogger()
 
-crowded_roads = []
 
 def writeExcel(dictionary, save_excel_path):
     df = pd.DataFrame(dictionary)
@@ -230,10 +229,18 @@ def removeLimitedEdges(graph, road_pipelines, time, rate):
     delete_node_pairs = []
     for node_id, node in graph.node_table.items():
         for neighbor_node_id, edge_id in node.connectedTo.items():
-            if (len(road_pipelines[edge_id]) > time) and (road_pipelines[edge_id][time] / graph.edge_table[edge_id].road_max_capacity > rate):
-                delete_node_pairs.append((node_id, neighbor_node_id))
-                # delete
-                crowded_roads.append((edge_id, road_pipelines[edge_id][time]))
+            if len(road_pipelines[edge_id]) > time:
+                if road_pipelines[edge_id][time] / graph.edge_table[edge_id].road_max_capacity > rate:
+                    delete_node_pairs.append((node_id, neighbor_node_id))
+                else:
+                    pass_time = graph.edge_table[edge_id].bprFunc(road_pipelines[edge_id][time])
+                    graph.edge_table[edge_id].updateRoadActualPassTime(pass_time)
+            else:
+                pass_time = graph.edge_table[edge_id].bprFunc(road_pipelines[edge_id][-1])
+                graph.edge_table[edge_id].updateRoadActualPassTime(pass_time)
+
+            # if (len(road_pipelines[edge_id]) > time) and (road_pipelines[edge_id][time] / graph.edge_table[edge_id].road_max_capacity > rate):
+            #     delete_node_pairs.append((node_id, neighbor_node_id))
 
     for node_id, neighbor_node_id in delete_node_pairs:
         if graph.removeEdgeByNodeId(node_id, neighbor_node_id) == False:
@@ -269,9 +276,11 @@ def greedyGenerateCarDepartureTime(graph, cars, rate):
     is_departure = [False] * (len(cars) + 1)
 
     while carReadyGoNum > 0:
-        last_carReadyGoNum = carReadyGoNum
         print("system time: %d, car ready go number: %d." % (system_time, carReadyGoNum))
-        # lanes = graph.getRoadLaneNum()
+
+        last_carReadyGoNum = carReadyGoNum
+        is_full_lane = False
+        lanes = graph.getRoadLaneNum()
 
         for i in range(len(cars)):
             if carReadyGoNum == 0:
@@ -290,8 +299,9 @@ def greedyGenerateCarDepartureTime(graph, cars, rate):
                     # print(cars[i].actual_path[j], cars[i].actual_path[j+1])
                     drive_road = graph.getEdgeByOriginAndTerminalNodeId(cars[i].actual_path[j], cars[i].actual_path[j+1])
                     drive_road_index = drive_road.edge_id
-                    # if (j == 0) and (lanes[drive_road_index] == 0):
-                    #     break
+                    if (j == 0) and (lanes[drive_road_index] == 0):
+                        is_full_lane = True
+                        break
                     # 根据道路容量bpr函数计算车辆通行时间
                     # Todo: 信号灯
                     drive_road_capacity = getCurrentRoadCapacity(road_pipelines, drive_road_index, drive_road.road_max_capacity, time, fill_amount)
@@ -310,9 +320,12 @@ def greedyGenerateCarDepartureTime(graph, cars, rate):
                     if all_car_pass_max_time < time:
                         all_car_pass_max_time = time
                     carReadyGoNum -= 1
-                    # lanes[graph.getEdgeByOriginAndTerminalNodeId(cars[i].actual_path[0], cars[i].actual_path[1]).edge_id] -= 1
+                    lanes[graph.getEdgeByOriginAndTerminalNodeId(cars[i].actual_path[0], cars[i].actual_path[1]).edge_id] -= 1
                     # print("    car id: %d, departure time: %d, arrived time: %d, number %d short path" % (cars[i].car_id, system_time, time, k+1), end=", ")
                     # print("drive path:", cars[i].actual_path)
+                    break
+
+                if is_full_lane == True:
                     break
 
                 # 拿到了time和road_pipeline
@@ -338,82 +351,11 @@ def greedyGenerateCarDepartureTime(graph, cars, rate):
             break
 
         system_time += 1
-    print(list(set(crowded_roads)))
 
     # print(road_pipelines)
     print("max time: %d." % all_car_pass_max_time)
     # cars.sort(key=lambda car: car.car_id)
     return road_pipelines, all_car_pass_max_time
-
-
-# def greedyGenerateCarDepartureTime(graph, cars, k_path_num=3):
-#     """
-#         Desc: 贪心算法生成车辆离开的时间
-#     """
-#     fill_amount = 100
-#     random.shuffle(cars)
-#     operate_graph = copy.deepcopy(graph)
-#     road_pipelines = [[0]*fill_amount for _ in range(operate_graph.edge_num + 1)]
-#     system_time = 1
-#     carReadyGoNum = len(cars)
-#     is_departure = [False] * len(cars)
-#     while carReadyGoNum > 0:
-#         print("system time: %d, car ready go number: %d." % (system_time, carReadyGoNum))
-#
-#         for i in range(len(cars)):
-#             if carReadyGoNum == 0:
-#                 break
-#             if is_departure[i] == True:
-#                 continue
-#             cars[i].departure_time = system_time
-#             time = system_time
-#
-#             # 调参
-#             k_paths = findKShortestPath(graph, cars[i].start_node_id, cars[i].terminal_node_id, k_path_num)
-#
-#             for k, item in enumerate(k_paths):
-#                 if is_departure[i] == True:
-#                     # print(cars[i].actual_path)
-#                     break
-#                 cars[i].actual_path = item[0]
-#                 record = []
-#                 for j in range(len(cars[i].actual_path)-1):
-#                     # print(cars[i].actual_path[j], cars[i].actual_path[j+1])
-#                     drive_road = graph.getEdgeByOriginAndTerminalNodeId(cars[i].actual_path[j], cars[i].actual_path[j+1])
-#                     drive_road_index = drive_road.edge_id
-#                     # 根据道路容量bpr函数计算车辆通行时间
-#                     # Todo: 信号灯
-#                     drive_road_capacity = getCurrentRoadCapacity(road_pipelines, drive_road_index, drive_road.road_max_capacity, time, fill_amount)
-#                     if drive_road_capacity == -1:
-#                         break
-#                     pass_time = graph.edge_table[drive_road_index].bprFunc(drive_road_capacity)
-#                     if operateRoadPipeline(road_pipelines, drive_road_index, drive_road.road_max_capacity, time, pass_time, fill_amount, record) == False:
-#                         break
-#                     # print("road_index %d, pass_time %d." % (drive_road_index, pass_time))
-#                     time += pass_time
-#                 else:
-#                     is_departure[i] = True
-#                     cars[i].arrived_time = time
-#                     carReadyGoNum -= 1
-#                     print("    car id: %d, departure time: %d, arrived time: %d, number %d short path" % (cars[i].car_id, system_time, time, k+1), end=", ")
-#                     print("drive path:", cars[i].actual_path)
-#                     continue
-#
-#                 # 回退处理
-#                 for (i, j) in record:
-#                     road_pipelines[i][j] -= 1
-#
-#         system_time += 1
-#
-#     max_time = 0
-#     # print(road_pipelines)
-#     for road in road_pipelines:
-#         for index in range(len(road)):
-#             if (road[index] != 0) and (max_time < index):
-#                 max_time = index
-#     print("max time: %d." % max_time)
-#     # cars.sort(key=lambda car: car.car_id)
-#     return road_pipelines, max_time
 
 
 def floatNumberRoundUp(num):

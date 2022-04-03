@@ -87,25 +87,8 @@ class Edge():
         return math.ceil(t)
 
 
-    # def addCar(self, car, system_time):
-    #     if self.road_capacity >= self.road_max_capacity:
-    #         return False
-    #     # 根据道路容量计算车辆通行时间
-    #     # 每个item: [car_id, pass_time, system_time]
-    #     self.road_queue.append([car.car_id, self._bprFunc(), system_time])
-    #     self.road_capacity += 1
-    #     return True
-    #
-    #
-    # def popCar(self, car):
-    #     index = 0
-    #     while index < self.road_capacity:
-    #         # if self.road_queue[index].汽车用时时间
-    #         pass
-
-
-    def printEdgeInfo(self):
-        pass
+    def updateRoadActualPassTime(self, pass_time):
+        self.free_flow_time = pass_time
 
 
 class Node():
