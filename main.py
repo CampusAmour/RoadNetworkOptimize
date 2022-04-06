@@ -45,11 +45,12 @@ def main():
     cars = createCars(car_info_path, graph, data["k_path_num"])
     end_time = time.time()
     print("create cars spend time:", end_time - start_time)
-    road_pipelines, max_length = greedyGenerateCarDepartureTime(graph, cars, data["road_rate"])
+    current_road_pipelines, total_road_pipelines, max_length = greedyGenerateCarDepartureTime(graph, cars, data["road_rate"])
 
     ### wirte data ###
     writeCarData(cars, "./result/car_result_time_"+str(max_length)+"_"+time.strftime("%Y-%m-%d-%H-%M",time.localtime())+".xlsx")
-    writeRoadData(graph.edge_table, road_pipelines, max_length, "./result/road_result_"+str(max_length)+"_"+time.strftime("%Y-%m-%d-%H-%M",time.localtime())+".xlsx")
+    writeRoadData(graph.edge_table, total_road_pipelines, max_length, "./result/road_capacity_result_"+str(max_length)+"_"+time.strftime("%Y-%m-%d-%H-%M",time.localtime())+".xlsx")
+    writeRoadData(graph.edge_table, current_road_pipelines, max_length, "./result/road_cars_result_"+str(max_length)+"_"+time.strftime("%Y-%m-%d-%H-%M",time.localtime())+".xlsx")
 
     print("total spend time:", time.time() - start_time)
 

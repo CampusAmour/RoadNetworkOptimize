@@ -43,6 +43,11 @@ class Car():
         # # 实际路线用时(由遗传算法给出)
         # self.actual_distance = actual_distance
 
+        # 确定路线后,车辆在无拥挤下的行驶时间
+        self.uncrowded_drive_time = -1
+
+        self.retry_times = 0
+
 
 
     def getNextPathNodeId(self):
@@ -79,6 +84,7 @@ class Edge():
         """
             Desc: BPR函数,当车道中车辆大于30%时,车辆行驶速度会下降,具体为公式xxx
         """
+        # print("road_capacity:", road_capacity)
         t = self.free_flow_time * (1 + self.alpha * math.pow((road_capacity / self.road_max_capacity), self.beta))
         if t < 0:
             # Todo: 异常处理
@@ -176,7 +182,7 @@ class Graph():
     def getRoadLaneNum(self):
         lanes = [0] * (self.edge_num + 1)
         for edge_id, edge in self.edge_table.items():
-            lanes[edge_id] = edge.lane_num
+            lanes[edge_id] = edge.lane_num * 2
         return lanes
 
 
