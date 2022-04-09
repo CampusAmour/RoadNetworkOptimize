@@ -278,7 +278,7 @@ def updateTotalRoadPipelines(graph, system_time, current_road_pipelines, actual_
         # print("    actual node[%d]->node[%d] pass time: %d" % (actual_path[i], actual_path[i+1], pass_time))
 
         if len(current_road_pipelines[road_index]) < (time + pass_time):
-            current_road_pipelines[road_index].extend([current_road_pipelines[road_index][-1]] * (time + pass_time - len(current_road_pipelines[road_index])))
+            current_road_pipelines[road_index].extend([0] * (time + pass_time - len(current_road_pipelines[road_index])))
         for t in range(time, time+pass_time):
             current_road_pipelines[road_index][t] += 1
         time += pass_time
@@ -298,26 +298,38 @@ def calcUncrowdedDriveTime(graph, actual_path):
     return uncrowded_drive_time
 
 
-def greedyGenerateCarDepartureTime(graph, cars, rate, start_time):
+def greedyGenerateCarDepartureTime(graph, cars, rate, system_time, start_time, total_road_pipelines=None, current_road_pipelines=None, is_departure=None):
     """
         Desc: 贪心算法生成车辆离开的时间
     """
     all_car_pass_max_time = 0
     # fill_amount = 100
-    random.shuffle(cars)
+    if system_time == 1:
+        random.shuffle(cars)
     operate_graph = copy.deepcopy(graph)
     # 记录累计道路容量
-    total_road_pipelines = [[0] for _ in range(operate_graph.edge_num + 1)]
+    if total_road_pipelines == None:
+        total_road_pipelines = [[0] for _ in range(operate_graph.edge_num + 1)]
     # 记录当前道路容量
-    current_road_pipelines = [[0] for _ in range(operate_graph.edge_num + 1)]
+    if current_road_pipelines == None:
+        current_road_pipelines = [[0] for _ in range(operate_graph.edge_num + 1)]
+
     road_current_accumulate = [.0] * (operate_graph.edge_num + 1)
     road_acc_amount = [0] * (operate_graph.edge_num + 1)
     for _, edge in operate_graph.edge_table.items():
         road_acc_amount[edge.edge_id] = edge.road_max_capacity / 3600
+    for _ in range(system_time-1):
+        roadAccumulate(road_current_accumulate, road_acc_amount)
 
-    system_time = 1
-    carReadyGoNum = len(cars)
-    is_departure = [False] * (len(cars) + 1)
+    if is_departure == None:
+        carReadyGoNum = len(cars)
+        is_departure = [False] * (len(cars) + 1)
+    else:
+        carReadyGoNum = 0
+        for i in range(1, len(cars)+1):
+            if is_departure[i] == False:
+                carReadyGoNum += 1
+        print("carReadyGoNum:", carReadyGoNum)
 
     while carReadyGoNum > 0:
         print("system time: %d, car ready go number: %d." % (system_time, carReadyGoNum))
@@ -415,7 +427,7 @@ def greedyGenerateCarDepartureTime(graph, cars, rate, start_time):
         #     break
 
         system_time += 1
-        if system_time % 10 == 0:
+        if system_time % 50 == 0:
             writeData(graph, cars, total_road_pipelines, current_road_pipelines, system_time)
 
         print("simulate spend time:", time.time() - start_time)
@@ -432,7 +444,7 @@ def floatNumberRoundUp(num):
     return math.ceil(num)
 
 
-def writeRoadData(roads, road_pipelines, max_length, save_excel_path="../result/road_esult.xlsx"):
+def writeRoadAccumulateData(roads, road_pipelines, max_length, save_excel_path="../result/road_result.xlsx"):
     road_ids = []
     road_capacities = []
     for index in sorted(roads.keys()):
@@ -440,10 +452,32 @@ def writeRoadData(roads, road_pipelines, max_length, save_excel_path="../result/
         road_capacities.append(roads[index].road_max_capacity)
 
     for i in range(1, len(road_pipelines)):
-        if len(road_pipelines[i]) < max_length:
-            road_pipelines[i].extend([0]*(max_length-len(road_pipelines[i])))
-        elif len(road_pipelines[i]) > max_length:
-            road_pipelines[i] = road_pipelines[i][:max_length]
+        if len(road_pipelines[i]) <= max_length:
+            road_pipelines[i].extend([road_pipelines[i][-1]] * (max_length + 1 - len(road_pipelines[i])))
+        else:
+            road_pipelines[i] = road_pipelines[i][: max_length + 1]
+    dictionary = {
+        "道路序号": road_ids,
+        "道路最大容量": road_capacities
+    }
+    pipelines = np.array(road_pipelines[1:])
+    for i in range(1, max_length):
+        dictionary[str(i)] = list(pipelines[:, i])
+    writeExcel(dictionary, save_excel_path)
+
+
+def writeRoadData(roads, road_pipelines, max_length, save_excel_path="../result/road_result.xlsx"):
+    road_ids = []
+    road_capacities = []
+    for index in sorted(roads.keys()):
+        road_ids.append(roads[index].edge_id)
+        road_capacities.append(roads[index].road_max_capacity)
+
+    for i in range(1, len(road_pipelines)):
+        if len(road_pipelines[i]) <= max_length:
+            road_pipelines[i].extend([0] * (max_length + 1 - len(road_pipelines[i])))
+        else:
+            road_pipelines[i] = road_pipelines[i][: max_length + 1]
     dictionary = {
         "道路序号": road_ids,
         "道路最大容量": road_capacities
@@ -483,10 +517,52 @@ def writeCarData(cars, save_excel_path="../result/car_result.xlsx"):
 
 def writeData(graph, cars, total_road_pipelines, current_road_pipelines, system_time):
     writeCarData(cars, "./result/car_result_system_time_" + str(system_time) + ".xlsx")
-    writeRoadData(graph.edge_table, total_road_pipelines, system_time+500,
+    writeRoadAccumulateData(graph.edge_table, total_road_pipelines, system_time,
                   "./result/road_capacity_result_system_time_" + str(system_time) + ".xlsx")
-    writeRoadData(graph.edge_table, current_road_pipelines, system_time+500,
+    writeRoadData(graph.edge_table, current_road_pipelines, system_time,
                   "./result/road_cars_result_system_time_" + str(system_time) + ".xlsx")
+
+
+def fillCarInfo(path, cars):
+    df = pd.read_excel(path)
+    is_departure = [False] * (len(cars) + 1)
+    car_ids = list(df.loc[:, "车辆序号"].values)
+    car_departure_time_times = list(df.loc[:, "车辆出发时间"].values)
+    car_arrived_times = list(df.loc[:, "车辆到达时间"].values)
+    uncrowded_drive_times = list(df.loc[:, "车辆(无拥堵)行驶时间"].values)
+    car_drive_paths = list(df.loc[:, "车辆行驶路线"].values)
+    cars.sort(key=lambda car: car.car_id)
+    for i in range(len(cars)):
+        if cars[i].car_id != car_ids[i]:
+            print("Error!")
+            return None
+        cars[i].departure_time = car_departure_time_times[i]
+        if cars[i].departure_time != 0:
+            is_departure[cars[i].car_id] = True
+        cars[i].arrived_time = car_arrived_times[i]
+        cars[i].uncrowded_drive_time = uncrowded_drive_times[i]
+        cars[i].actual_path = [int(val) for val in car_drive_paths[i].split("->")]
+    return is_departure
+
+
+def fillPipeline(pipeline, df, i):
+    line = list(df.loc[i - 1].values)
+    if i != line[0]:
+        return False
+    pipeline.extend(line[2:])
+    return True
+
+def fillRoadInfo(road_accumulate_capacity_path, road_current_capacity_path, edge_num):
+    total_road_pipelines = [[0] for _ in range(edge_num + 1)]
+    current_road_pipelines = [[0] for _ in range(edge_num + 1)]
+
+    df1 = pd.read_excel(road_accumulate_capacity_path)
+    df2 = pd.read_excel(road_current_capacity_path)
+    for i in range(1, edge_num+1):
+        if not(fillPipeline(total_road_pipelines[i], df1, i) and fillPipeline(current_road_pipelines[i], df2, i)):
+            print("Fill road info error!")
+            return None, None
+    return current_road_pipelines, total_road_pipelines
 
 
 if __name__ == "__main__":
