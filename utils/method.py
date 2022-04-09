@@ -199,20 +199,22 @@ def findAllPathsBetweenTwoNode(graph, start_node_id, terminal_node_id, max_depth
     visited[start_node_id] = False
 
 
-def getCurrentRoadCapacity(road_pipelines, road_index, road_max_capacity, system_time, fill_amount):
-    while len(road_pipelines[road_index]) <= system_time:
-        road_pipelines[road_index].extend([0] * fill_amount)
+def getCurrentRoadCapacity(road_pipelines, road_index, road_max_capacity, system_time):
+    # while len(road_pipelines[road_index]) <= system_time:
+    #     road_pipelines[road_index].extend([0] * fill_amount)
+    if len(road_pipelines[road_index]) <= system_time:
+        return 0
     if road_pipelines[road_index][system_time] >= road_max_capacity:
         # 当前时刻车道满了
         return -1
     return road_pipelines[road_index][system_time]
 
 
-def operateRoadPipeline(road_pipelines, road_index, road_max_capacity, system_time, pass_time, fill_amount, record, rate):
-    while len(road_pipelines[road_index]) <= (system_time + pass_time + 3600):
-        road_pipelines[road_index].extend([0] * fill_amount)
+def operateRoadPipeline(road_pipelines, road_index, road_max_capacity, system_time, pass_time, record, rate):
+    if len(road_pipelines[road_index]) < (system_time + pass_time):
+        road_pipelines[road_index].extend([road_pipelines[road_index][-1]] * (system_time + pass_time - len(road_pipelines[road_index])))
     # print(pass_time)
-    for i in range(system_time, system_time+pass_time+3600):
+    for i in range(system_time, system_time+pass_time):
         if road_pipelines[road_index][i] / road_max_capacity > rate:
             # print("time %d, road index %d, current road %d, road max %d." % (i, road_index, road_pipelines[road_index][i], road_max_capacity))
             # 此时车道已达到拥塞,不允许车辆再进入
@@ -262,16 +264,21 @@ def changeDrivePath(graph, road_pipelines, road_current_accumulate, time, start_
     return res, dist, mid_path
 
 
-def updateTotalRoadPipelines(graph, system_time, current_road_pipelines, actual_path, fill_amount):
+def updateTotalRoadPipelines(graph, system_time, current_road_pipelines, actual_path):
     time = system_time
     for i in range(len(actual_path) - 1):
         edge = graph.getEdgeByOriginAndTerminalNodeId(actual_path[i], actual_path[i+1])
         road_index = edge.edge_id
-        pass_time = edge.bprFunc(current_road_pipelines[road_index][time])
+        # print("length: %d, time: %d" % (len(current_road_pipelines[road_index]), time))
+        if len(current_road_pipelines[road_index]) <= time:
+            capacity = 0
+        else:
+            capacity = current_road_pipelines[road_index][time]
+        pass_time = edge.bprFunc(capacity)
         # print("    actual node[%d]->node[%d] pass time: %d" % (actual_path[i], actual_path[i+1], pass_time))
 
-        while len(current_road_pipelines[road_index]) <= (time + pass_time):
-            current_road_pipelines[road_index].extend([0] * fill_amount)
+        if len(current_road_pipelines[road_index]) < (time + pass_time):
+            current_road_pipelines[road_index].extend([current_road_pipelines[road_index][-1]] * (time + pass_time - len(current_road_pipelines[road_index])))
         for t in range(time, time+pass_time):
             current_road_pipelines[road_index][t] += 1
         time += pass_time
@@ -296,13 +303,13 @@ def greedyGenerateCarDepartureTime(graph, cars, rate, start_time):
         Desc: 贪心算法生成车辆离开的时间
     """
     all_car_pass_max_time = 0
-    fill_amount = 100
+    # fill_amount = 100
     random.shuffle(cars)
     operate_graph = copy.deepcopy(graph)
     # 记录累计道路容量
-    total_road_pipelines = [[0]*fill_amount for _ in range(operate_graph.edge_num + 1)]
+    total_road_pipelines = [[0] for _ in range(operate_graph.edge_num + 1)]
     # 记录当前道路容量
-    current_road_pipelines = [[0]*fill_amount for _ in range(operate_graph.edge_num + 1)]
+    current_road_pipelines = [[0] for _ in range(operate_graph.edge_num + 1)]
     road_current_accumulate = [.0] * (operate_graph.edge_num + 1)
     road_acc_amount = [0] * (operate_graph.edge_num + 1)
     for _, edge in operate_graph.edge_table.items():
@@ -350,14 +357,14 @@ def greedyGenerateCarDepartureTime(graph, cars, rate, start_time):
                         break
                     # 根据道路容量bpr函数计算车辆通行时间
                     # Todo: 信号灯
-                    drive_road_capacity = getCurrentRoadCapacity(current_road_pipelines, drive_road_index, road_current_accumulate[drive_road_index], car_drive_time, fill_amount)
+                    drive_road_capacity = getCurrentRoadCapacity(current_road_pipelines, drive_road_index, road_current_accumulate[drive_road_index], car_drive_time)
                     if drive_road_capacity == -1:
                         block_time = car_drive_time
                         break
                     pass_time = graph.edge_table[drive_road_index].bprFunc(drive_road_capacity)
                     # print("    simulate node[%d]->node[%d] pass time: %d" % (cars[i].actual_path[j], cars[i].actual_path[j+1], pass_time))
 
-                    ok, block_time = operateRoadPipeline(total_road_pipelines, drive_road_index, road_current_accumulate[drive_road_index], car_drive_time, pass_time, fill_amount, record, rate)
+                    ok, block_time = operateRoadPipeline(total_road_pipelines, drive_road_index, road_current_accumulate[drive_road_index], car_drive_time, pass_time, record, rate)
                     if ok == False:
                         break
                     # print("road_index %d, pass_time %d." % (drive_road_index, pass_time))
@@ -373,7 +380,7 @@ def greedyGenerateCarDepartureTime(graph, cars, rate, start_time):
                     # print("uncrowded_drive_time:", cars[i].uncrowded_drive_time)
 
                     # 更新累计道路容量
-                    updateTotalRoadPipelines(graph, system_time, current_road_pipelines, cars[i].actual_path, fill_amount)
+                    updateTotalRoadPipelines(graph, system_time, current_road_pipelines, cars[i].actual_path)
 
                     if all_car_pass_max_time < car_drive_time:
                         all_car_pass_max_time = car_drive_time
