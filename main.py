@@ -37,26 +37,6 @@ def way_one():
     print("total spend time:", time.time() - start_time)
 
 
-def main():
-    road_info_path = "./input_data/road_info.xlsx"
-    car_info_path = "./input_data/car_info.xlsx"
-    json_path = "./config.json"
-    data = parseJsonFile(json_path)
-    start_time = time.time()
-    graph = createGraph(road_info_path)
-    cars = createCars(car_info_path, graph, data["k_path_num"])
-    end_time = time.time()
-    print("create cars spend time:", end_time - start_time)
-    current_road_pipelines, total_road_pipelines, max_length = greedyGenerateCarDepartureTime(graph, cars, data["road_rate"], 1, start_time)
-
-    ### wirte data ###
-    writeCarData(cars, "./result/car_result_time_"+str(max_length)+"_"+time.strftime("%Y-%m-%d-%H-%M",time.localtime())+".xlsx")
-    writeRoadAccumulateData(graph.edge_table, total_road_pipelines, max_length, "./result/road_capacity_result_"+str(max_length)+"_"+time.strftime("%Y-%m-%d-%H-%M",time.localtime())+".xlsx")
-    writeRoadData(graph.edge_table, current_road_pipelines, max_length, "./result/road_cars_result_"+str(max_length)+"_"+time.strftime("%Y-%m-%d-%H-%M",time.localtime())+".xlsx")
-
-    print("total spend time:", time.time() - start_time)
-
-
 def load():
     road_info_path = "./input_data/road_info.xlsx"
     car_info_path = "./input_data/car_info.xlsx"
@@ -93,6 +73,24 @@ def load():
     print("total spend time:", time.time() - start_time)
 
 
+def main():
+    road_info_path = "./input_data/road_info.xlsx"
+    car_info_path = "./input_data/car_info.xlsx"
+    json_path = "./config.json"
+    data = parseJsonFile(json_path)
+    start_time = time.time()
+    graph = createGraph(road_info_path)
+    cars = createCars(car_info_path, graph, data["k_path_num"])
+    end_time = time.time()
+    print("create cars spend time:", end_time - start_time)
+    current_road_pipelines, total_road_pipelines, max_length = greedyGenerateCarDepartureTime(graph, cars, data["road_rate"], 1, start_time)
+
+    ### wirte data ###
+    writeCarData(cars, "./result/car_result_time_"+str(max_length)+"_"+time.strftime("%Y-%m-%d-%H-%M",time.localtime())+".xlsx")
+    writeRoadAccumulateData(graph.edge_table, total_road_pipelines, max_length, "./result/road_capacity_result_"+str(max_length)+"_"+time.strftime("%Y-%m-%d-%H-%M",time.localtime())+".xlsx")
+    writeRoadData(graph.edge_table, current_road_pipelines, max_length, "./result/road_cars_result_"+str(max_length)+"_"+time.strftime("%Y-%m-%d-%H-%M",time.localtime())+".xlsx")
+
+    print("total spend time:", time.time() - start_time)
+
 if __name__ == "__main__":
     main()
-    # load()
