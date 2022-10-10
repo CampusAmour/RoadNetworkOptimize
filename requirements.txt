@@ -3,3 +3,5 @@ numpy>=1.19.5
 pandas>=1.1.5
 openpyxl>=3.0.9
 xlrd==1.2.0
+PyQt5>=5.15.2
+igraph>=0.10.1

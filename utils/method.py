@@ -297,11 +297,8 @@ def calcUncrowdedDriveTime(graph, actual_path):
         uncrowded_drive_time += edge.free_flow_time
     return uncrowded_drive_time
 
-
+"""
 def greedyGenerateCarDepartureTime(graph, cars, rate, system_time, start_time, total_road_pipelines=None, current_road_pipelines=None, is_departure=None):
-    """
-        Desc: 贪心算法生成车辆离开的时间
-    """
     all_car_pass_max_time = 0
     # fill_amount = 100
     if system_time == 1:
@@ -435,7 +432,7 @@ def greedyGenerateCarDepartureTime(graph, cars, rate, system_time, start_time, t
     print("max time: %d." % all_car_pass_max_time)
     # cars.sort(key=lambda car: car.car_id)
     return current_road_pipelines, total_road_pipelines, all_car_pass_max_time
-
+"""
 
 def floatNumberRoundUp(num):
     if num < 0:

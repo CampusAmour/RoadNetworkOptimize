@@ -7,13 +7,14 @@ Contect: campusamour@gmail.com
 Time   : 2022/3/12 23:52
 """
 import os
+import time
 import logging
 import logging.handlers
 
 
 class Logger(object):
     def __init__(self, log_name, level="DEBUG"):
-        self.log_path = os.getcwd() + "//logs//" + log_name
+        self.log_path = os.getcwd() + "//logs//" + log_name + "_" + time.strftime("%Y%m%d%H%M%S", time.localtime(time.time()))
         self.logger = logging.getLogger()
         self.logger.setLevel(level)
         self.fmt = "%(asctime)s [%(levelname)s][%(message)s][%(funcName)s,%(filename)s][line:%(lineno)d][tid:%(thread)d][pid:%(process)d]"

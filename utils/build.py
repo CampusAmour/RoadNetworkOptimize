@@ -1,6 +1,6 @@
 from utils.method import dijkstra, findKShortestPath
 from utils.model import Edge, Graph, Car
-from utils.process_data import readRoadInfo, readCarInfo
+from utils.process import readRoadInfo, readCarInfo
 from utils.logger import Logger
 
 

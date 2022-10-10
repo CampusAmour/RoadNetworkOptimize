@@ -9,10 +9,11 @@ Time   : 2022/10/5 19:10
 import os
 import igraph as ig
 import matplotlib.pyplot as plt
-from process_data import readRoadInfo
+from utils.process import readRoadInfo
 
 class DrawGraph():
-    def __init__(self, road_path="../input_data/road_info.xlsx"):
+    def __init__(self, base_path, road_path="../input_data/road_info.xlsx"):
+        self.base_path = base_path
         road_info = readRoadInfo(road_path)
         self.name_to_id = {}
         index = 0
@@ -52,10 +53,10 @@ class DrawGraph():
             vertex_label=[v[1] for v in sorted(self.id_to_name.items(), key=lambda x: x[0])]
         )
         # plt.show()
-        if not os.path.exists("../temp"):
-            os.mkdir("../temp")
+        if not os.path.exists(self.base_path + "/temp"):
+            os.mkdir(self.base_path + "/temp")
 
-        fig.savefig("../temp/base_road_graph.png", bbox_inches='tight', pad_inches=-0.1)
+        fig.savefig(self.base_path + "/temp/base_road_graph.png", bbox_inches='tight', pad_inches=-0.1)
 
 
 if __name__ == "__main__":
