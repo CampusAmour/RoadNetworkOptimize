@@ -3,38 +3,10 @@ import pandas as pd
 import numpy as np
 from utils.model import Simulator
 from utils.process_data import parseJsonFile
-from utils.genetic_algorithm import GeneticAlgorithm
 from utils.build import createGraph, createCars
 from utils.method import greedyGenerateCarDepartureTime, writeCarData, writeRoadData, writeRoadAccumulateData, fillCarInfo, fillRoadInfo
-
-
-def way_one():
-    """
-        遗传算法
-    """
-    road_info_path = "./input_data/road_info.xlsx"
-    car_info_path = "./input_data/car_info.xlsx"
-    json_path = "./config.json"
-    start_time = time.time()
-    graph = createGraph(road_info_path)
-    data = parseJsonFile(json_path)
-    population_size = data["population_size"]
-    epoch = data["epoch"]
-    ga = GeneticAlgorithm(graph, population_size, car_info_path, epoch)
-    ga.generatePopulation()
-    best_chromosome = ga.execute()
-
-    best_cars = best_chromosome[1]
-    simulator = Simulator(graph)
-    res, road_pipelines, max_time = simulator.action(best_cars)
-    if res == True:
-        ### wirte data ###
-        writeCarData(best_cars, "./result/car_result_"+time.strftime("%Y-%m-%d-%H-%M",time.localtime())+".xlsx")
-        writeRoadData(graph.edge_table, road_pipelines, max_time, "./result/road_result_"+time.strftime("%Y-%m-%d-%H-%M",time.localtime())+".xlsx")
-    else:
-        print("Error: output wrong...")
-
-    print("total spend time:", time.time() - start_time)
+from utils.ui import TrafficLoadWindow
+from PyQt5.QtWidgets import QApplication
 
 
 def load():
@@ -92,5 +64,14 @@ def main():
 
     print("total spend time:", time.time() - start_time)
 
+
+class TrafficSystem():
+    def __init__(self):
+        pass
+
 if __name__ == "__main__":
-    main()
+    app = QApplication([])
+    window = TrafficLoadWindow()
+    window.ui.show()
+    app.exec_()
+    # main()

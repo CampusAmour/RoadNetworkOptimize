@@ -49,7 +49,6 @@ class Car():
         self.retry_times = 0
 
 
-
     def getNextPathNodeId(self):
         """
             Desc: 返回path路径中的下一个结点id
