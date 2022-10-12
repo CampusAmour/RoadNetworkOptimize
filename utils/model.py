@@ -32,9 +32,10 @@ class Car():
         self.departure_time = departure_time
         # 车辆到达时间
         self.arrived_time = 0
-        # 实际路线(由遗传算法给出)
-        # self.actual_path = actual_path
+        # 实际路线(节点组成)
         self.actual_path = actual_path
+        # 实际路线(边组成)
+        self.edge_actual_path = []
         # 记录car当前所处于的结点的索引(初始为start_node)
         self.current_arrived_pos = 0
         # 记录car当前所处于的node id

@@ -9,7 +9,7 @@ Desc   : 读取输入数据
 """
 import json
 import pandas as pd
-from utils.model import InputItem
+from utils.model import InputItem, Car
 
 
 def readRoadInfo(path):
@@ -32,6 +32,15 @@ def readCarInfo(path):
             create_car_info.append((int(row[columns[0]]), int(columns[i]), int(row[columns[i]])))
     return create_car_info
 
+def generateCars(path):
+    create_car_info = readCarInfo(path)
+    cars = []
+    car_id = 0
+    for info in create_car_info:
+        for _ in range(info[2]):
+            cars.append(Car(car_id, info[0], info[1], None, None, None, None))
+            car_id += 1
+    return cars
 
 def parseJsonFile(json_path):
     with open(json_path, 'r', encoding="utf-8") as read_content:

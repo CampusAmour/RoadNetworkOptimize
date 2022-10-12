@@ -8,16 +8,16 @@ Time   : 2022/10/5 19:33
 """
 
 import os
-import time
 import threading
 from PyQt5 import uic
-from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QApplication, QFileDialog, QMessageBox, QPushButton
+from PyQt5.QtCore import Qt, QThread
+from PyQt5.QtWidgets import QFileDialog, QMessageBox, QPushButton, QTableWidgetItem
 from PyQt5.QtGui import QPixmap, QTextCursor
 from utils.draw import DrawGraph
 from utils.process import parseJsonFile
 from utils.build import createGraph, createCars
 from utils.method import *
+from utils.process import generateCars
 
 
 
@@ -28,27 +28,84 @@ class TrafficMainWindow():
         self.last_ui = last_window
         self.ui.backHomeBut.clicked.connect(self.backHome)
 
-
         self.roadFilePath = roadFilePath
         self.carFilePath = carFilePath
+
+        # draw graph
         self.dw = DrawGraph(self.base_path, self.roadFilePath)
-        self.dw.drawRoad()
+        self.dw.drawBaseRoad()
         self.ui.baseRoadLabel.setPixmap(QPixmap(self.base_path + "/temp/base_road_graph.png"))
         self.ui.baseRoadLabel.setText("")
         self.ui.baseRoadLabel.setObjectName("道路信息图")
 
+        # fill table
+        self.cars = generateCars(self.carFilePath)
+        self.ui.carTable.setRowCount(len(self.cars))
+        self._fillCarTable()
+        self.ui.carTable.itemClicked.connect(self.requireTableRow)
+
         self.ui.runBut.clicked.connect(self.switchThread)
 
         self.isRunFinish = False
+
+    def _fillCarTable(self):
+        for index, car in enumerate(self.cars):
+            # 起始节点
+            item = QTableWidgetItem(str(car.start_node_id))
+            item.setTextAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+            self.ui.carTable.setItem(index, 0, item)
+
+            # 终点节点
+            item = QTableWidgetItem(str(car.terminal_node_id))
+            item.setTextAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+            self.ui.carTable.setItem(index, 1, item)
+
+            # 出发时间
+            fillItem = "-"
+            if (car.departure_time != None) and (car.departure_time != 0):
+                fillItem = str(car.departure_time)
+            item = QTableWidgetItem(fillItem)
+            item.setTextAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+            self.ui.carTable.setItem(index, 2, item)
+
+            # 到达时间
+            fillItem = "-"
+            if (car.arrived_time != None) and (car.arrived_time != 0):
+                fillItem = str(car.arrived_time)
+            item = QTableWidgetItem(fillItem)
+            item.setTextAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+            self.ui.carTable.setItem(index, 3, item)
+
+    def requireTableRow(self, item=None):
+        if item == None:
+            # print("table item empty")
+            return
+        print("choose row:", item.row())
+        if self.isRunFinish == False:
+            print("car route is not generated...")
+            return
+        print("car id:", self.cars[item.row()].car_id)
+        car = self.cars[item.row()]
+        if os.path.exists(self.base_path + "/temp/carid_%s_trace_graph.png" % (str(car.car_id))) == False:
+            self.dw.drawDriveRoadByCar(car)
+        self.ui.carTraceLabel.setPixmap(QPixmap(self.base_path + "/temp/carid_%s_trace_graph.png" % str(car.car_id)))
+        self.ui.carTraceLabel.setText("")
+        self.ui.carTraceLabel.setObjectName("车辆id[%s]行驶轨迹图" % str(car.car_id))
 
     def sendMsgToRuntimeText(self, msg="\n"):
         self.ui.showRuntimeText.moveCursor(QTextCursor.End)
         self.ui.showRuntimeText.insertPlainText(msg)
 
     def switchThread(self):
+        if self.isRunFinish == True:
+            print("No need to run...")
+            return
+        self.isRunFinish = True # 防止重入
         self.t = threading.Thread(target=self.calc())
         self.t.start()
-        self.isRunFinish = False
+
+        # thread = BackgroundThread()
+        # thread.run(self.)
 
     def _greedyGenerateCarDepartureTime(self, graph, cars, rate, system_time, start_time, total_road_pipelines=None,
                                        current_road_pipelines=None, is_departure=None):
@@ -196,7 +253,16 @@ class TrafficMainWindow():
         # print(current_road_pipelines)
         # print("max time: %d." % all_car_pass_max_time)
         self.sendMsgToRuntimeText("max time: %d.\n" % all_car_pass_max_time)
-        # cars.sort(key=lambda car: car.car_id)
+
+        cars.sort(key=lambda car: car.car_id)
+        # 填入car的edge_actual_path
+        for car in cars:
+            for i in range(len(car.actual_path)-1):
+                car.edge_actual_path.append(graph.getEdgeByOriginAndTerminalNodeId(car.actual_path[i], car.actual_path[i+1]).edge_id)
+
+        self.cars = cars
+        self._fillCarTable()
+
         return current_road_pipelines, total_road_pipelines, all_car_pass_max_time
 
 
@@ -225,9 +291,21 @@ class TrafficMainWindow():
         #                                                                                    time.localtime()) + ".xlsx")
 
         print("total spend time:", time.time() - start_time)
-        self.isRunFinish = True
+
+    def removeFolder(self, path):
+        if os.path.isdir(path):
+            for item in os.listdir(path):
+                self.removeFolder(os.path.join(path, item))
+            if os.path.exists(path):
+                os.rmdir(path)
+        else:
+            if os.path.exists(path):
+                os.remove(path)
 
     def backHome(self):
+        if os.path.exists(self.base_path + "/temp"):
+            self.removeFolder(self.base_path + "/temp")
+        print("#########")
         self.last_ui.show()
         self.ui.close()
         print("返回成功...")
@@ -291,6 +369,18 @@ class TrafficLoadWindow():
         self.main_window = TrafficMainWindow(self.ui, self.base_path, self.roadFilePath, self.carFilePath)
         self.main_window.ui.show()
 
+
+# TODO: QThread后台执行(需解决循环调用)
+class BackgroundThread(QThread):
+    def __init__(self):
+        super(BackgroundThread, self).__init__()
+        print("background thread start...")
+
+    def run(self, mainWindow):
+        mainWindow.calc()
+
+    def __del__(self):
+        print("background thread destroy...")
 
 if __name__ == "__main__":
     # app = QApplication([])
