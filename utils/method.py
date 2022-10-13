@@ -465,9 +465,13 @@ def writeRoadAccumulateData(roads, road_pipelines, max_length, save_excel_path="
 
 def writeRoadData(roads, road_pipelines, max_length, save_excel_path="../result/road_result.xlsx"):
     road_ids = []
+    road_left_nodes = []
+    road_right_nodes = []
     road_capacities = []
     for index in sorted(roads.keys()):
         road_ids.append(roads[index].edge_id)
+        road_left_nodes.append(roads[index].origin_node_id)
+        road_right_nodes.append(roads[index].terminal_node_id)
         road_capacities.append(roads[index].road_max_capacity)
 
     for i in range(1, len(road_pipelines)):
@@ -477,6 +481,8 @@ def writeRoadData(roads, road_pipelines, max_length, save_excel_path="../result/
             road_pipelines[i] = road_pipelines[i][: max_length + 1]
     dictionary = {
         "道路序号": road_ids,
+        "源点": road_left_nodes,
+        "终点": road_right_nodes,
         "道路最大容量": road_capacities
     }
     pipelines = np.array(road_pipelines[1:])

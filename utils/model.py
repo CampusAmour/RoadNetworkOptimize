@@ -75,6 +75,7 @@ class Edge():
         # self.min_speed = input_item.min_speed
         self.road_max_capacity = input_item.road_max_capacity
         self.lane_num = input_item.lane_num
+        self.car_interval = None    # 车辆在该条路上出发的间隔，
 
         self.alpha = 0.61
         self.beta = 1.653
@@ -261,6 +262,18 @@ class Simulator():
                     max_time = index
         print("max time: %d." % max_time)
         return True, road_pipelines, max_time
+
+class DisplayEdge():
+    def __init__(self, edge_id, origin_node_id, terminal_node_id, capacity_with_time):
+        # 0-边id, 1-路段, 2-自由流时间, 3-道路容量
+        self.edge_id = edge_id
+        self.origin_node_id = origin_node_id
+        self.terminal_node_id = terminal_node_id
+        self.capacity_with_time = [int(item) for item in capacity_with_time]
+
+    def __str__(self):
+        return "edge id: %s, origin node id: %s, terminal node id: %s" %\
+               (self.edge_id, self.origin_node_id, self.terminal_node_id)
 
 
 if __name__ == "__main__":

@@ -13,12 +13,12 @@ from PyQt5 import uic
 from PyQt5.QtCore import Qt, QThread
 from PyQt5.QtWidgets import QFileDialog, QMessageBox, QPushButton, QTableWidgetItem
 from PyQt5.QtGui import QPixmap, QTextCursor
-from utils.draw import DrawGraph
+from utils.draw import DrawGraph, drawEdgeCapacityWithTime
 from utils.process import parseJsonFile
 from utils.build import createGraph, createCars
 from utils.method import *
 from utils.process import generateCars
-
+from utils.model import DisplayEdge
 
 
 class TrafficMainWindow():
@@ -42,9 +42,13 @@ class TrafficMainWindow():
         self.cars = generateCars(self.carFilePath)
         self.ui.carTable.setRowCount(len(self.cars))
         self._fillCarTable()
-        self.ui.carTable.itemClicked.connect(self.requireTableRow)
+        self.ui.carTable.itemClicked.connect(self.showCarRuntimeInfo)
 
         self.ui.runBut.clicked.connect(self.switchThread)
+
+        # edge
+        self.ui.chooseEdgeBox.currentIndexChanged.connect(self._showEdgeCapacityWithTime)
+        # self.ui.chooseTimeBox.currentIndexChanged.connect(self.xxx)
 
         self.isRunFinish = False
 
@@ -76,7 +80,8 @@ class TrafficMainWindow():
             item.setTextAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
             self.ui.carTable.setItem(index, 3, item)
 
-    def requireTableRow(self, item=None):
+
+    def showCarRuntimeInfo(self, item=None):
         if item == None:
             # print("table item empty")
             return
@@ -91,6 +96,45 @@ class TrafficMainWindow():
         self.ui.carTraceLabel.setPixmap(QPixmap(self.base_path + "/temp/carid_%s_trace_graph.png" % str(car.car_id)))
         self.ui.carTraceLabel.setText("")
         self.ui.carTraceLabel.setObjectName("车辆id[%s]行驶轨迹图" % str(car.car_id))
+
+        print("车辆id:%d\n"
+              "在时刻[%d]从节点[%d]出发\n"
+              "于时刻[%d]到达节点[%d]\n"
+              "行驶路线:%s，用时:%d" %
+              (car.car_id, car.departure_time, car.start_node_id, car.arrived_time,
+               car.terminal_node_id, "->".join([str(node_id) for node_id in car.actual_path]),
+               car.arrived_time-car.departure_time))
+        self.ui.carInfoLabel.setText("车辆id:%d\n"
+                                     "在时刻[%d]从节点[%d]出发\n"
+                                     "于时刻[%d]到达节点[%d]\n"
+                                     "行驶路线:%s，用时:%d" %
+                                     (car.car_id, car.departure_time, car.start_node_id, car.arrived_time,
+                                      car.terminal_node_id, "->".join([str(node_id) for node_id in car.actual_path]),
+                                      car.arrived_time-car.departure_time))
+
+    def _loadEdgeInfo(self):
+        roadInfoPath = self.base_path + "/temp/road_cars_result_" + str(self.totalTime) + ".xlsx"
+        df = pd.DataFrame(pd.read_excel(roadInfoPath))
+        self.displayEdges = []
+        edge_titles = []
+        # print(self.totalTime)
+        for index, row in df.iterrows():
+            edge_titles.append("道路编号%d[%d->%d]" % (int(row[0]), int(row[1]), int(row[2])))
+            self.displayEdges.append(DisplayEdge(int(row[0]), int(row[1]), int(row[2]), row[4:]))
+        # drawEdgeCapacityWithTime(self.displayEdges[0], self.base_path)
+        for de in self.displayEdges:
+            drawEdgeCapacityWithTime(de, self.base_path)
+        self.ui.chooseEdgeBox.addItems(edge_titles)
+
+    def _showEdgeCapacityWithTime(self):
+        chooseIndex = self.ui.chooseEdgeBox.currentIndex()
+        print("current choose index: %d." % chooseIndex)
+        if (chooseIndex == 0) or (chooseIndex > len(self.displayEdges)):
+            return
+
+        self.ui.edgeCapacityTrendLabel.setPixmap(QPixmap(self.base_path + "/temp/edge_id_%d" % (chooseIndex) + ".png"))
+        self.ui.edgeCapacityTrendLabel.setText("")
+        self.ui.edgeCapacityTrendLabel.setObjectName("道路容量变化图")
 
     def sendMsgToRuntimeText(self, msg="\n"):
         self.ui.showRuntimeText.moveCursor(QTextCursor.End)
@@ -155,6 +199,7 @@ class TrafficMainWindow():
 
             for i in range(len(cars)):
                 if carReadyGoNum == 0:
+                    all_car_pass_max_time -= 1
                     break
                 car_id = cars[i].car_id
                 if is_departure[car_id] == True:
@@ -281,16 +326,17 @@ class TrafficMainWindow():
                                                                                                   start_time)
         print("max_length:", max_length)
         # ### wirte data ###
-        # writeCarData(cars, "./result/car_result_time_" + str(max_length) + "_" + time.strftime("%Y-%m-%d-%H-%M",
-        #                                                                                        time.localtime()) + ".xlsx")
-        # writeRoadAccumulateData(graph.edge_table, total_road_pipelines, max_length,
-        #                         "./result/road_capacity_result_" + str(max_length) + "_" + time.strftime(
-        #                             "%Y-%m-%d-%H-%M", time.localtime()) + ".xlsx")
-        # writeRoadData(graph.edge_table, current_road_pipelines, max_length,
-        #               "./result/road_cars_result_" + str(max_length) + "_" + time.strftime("%Y-%m-%d-%H-%M",
-        #                                                                                    time.localtime()) + ".xlsx")
+        writeCarData(cars, self.base_path + "/temp/car_result_time_" + str(max_length) + ".xlsx")
+        writeRoadAccumulateData(graph.edge_table, total_road_pipelines, max_length,
+                                 self.base_path + "/temp/road_capacity_result_" + str(max_length) + ".xlsx")
+        writeRoadData(graph.edge_table, current_road_pipelines, max_length,
+                       self.base_path + "/temp/road_cars_result_" + str(max_length) + ".xlsx")
+        self.totalTime = max_length
 
         print("total spend time:", time.time() - start_time)
+
+        # 加载边信息
+        self._loadEdgeInfo()
 
     def removeFolder(self, path):
         if os.path.isdir(path):

@@ -46,7 +46,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>111</string>
+    <string/>
    </property>
   </widget>
   <widget class="Line" name="line">
@@ -194,10 +194,66 @@
   <widget class="QLabel" name="carTraceLabel">
    <property name="geometry">
     <rect>
-     <x>70</x>
-     <y>580</y>
+     <x>60</x>
+     <y>530</y>
      <width>401</width>
      <height>361</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>111</string>
+   </property>
+  </widget>
+  <widget class="QComboBox" name="chooseTimeBox">
+   <property name="geometry">
+    <rect>
+     <x>580</x>
+     <y>520</y>
+     <width>391</width>
+     <height>22</height>
+    </rect>
+   </property>
+   <item>
+    <property name="text">
+     <string>&gt;&gt;&gt; 选择时刻</string>
+    </property>
+   </item>
+  </widget>
+  <widget class="QLabel" name="carInfoLabel">
+   <property name="geometry">
+    <rect>
+     <x>60</x>
+     <y>900</y>
+     <width>401</width>
+     <height>91</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>11</string>
+   </property>
+  </widget>
+  <widget class="QComboBox" name="chooseEdgeBox">
+   <property name="geometry">
+    <rect>
+     <x>1300</x>
+     <y>520</y>
+     <width>391</width>
+     <height>22</height>
+    </rect>
+   </property>
+   <item>
+    <property name="text">
+     <string>&gt;&gt;&gt; 选择道路编号</string>
+    </property>
+   </item>
+  </widget>
+  <widget class="QLabel" name="edgeCapacityTrendLabel">
+   <property name="geometry">
+    <rect>
+     <x>1090</x>
+     <y>560</y>
+     <width>801</width>
+     <height>481</height>
     </rect>
    </property>
    <property name="text">

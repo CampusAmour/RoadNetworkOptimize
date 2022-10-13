@@ -9,6 +9,9 @@ Time   : 2022/10/5 19:10
 import os
 import igraph as ig
 import matplotlib.pyplot as plt
+from matplotlib import font_manager
+
+import utils.model
 from utils.process import readRoadInfo
 
 class DrawGraph():
@@ -98,6 +101,28 @@ class DrawGraph():
             os.mkdir(self.base_path + "/temp")
 
         fig.savefig(self.base_path + "/temp/carid_%s_trace_graph.png" % (str(car.car_id)), bbox_inches='tight', pad_inches=-0.1)
+
+def drawEdgeCapacityWithTime(de: utils.model.DisplayEdge, base_path):
+    print(de.edge_id)
+    if de.edge_id <= 2:
+        print(de.capacity_with_time)
+    y = de.capacity_with_time
+    x = [i+1 for i in range(len(de.capacity_with_time))]
+
+    mf = font_manager.FontProperties(fname=base_path+"/tool/simsun.ttc")
+
+    # 设置标题
+    plt.title(u"道路编号%d[%d->%d]流量变化图" % (de.edge_id, de.origin_node_id, de.terminal_node_id), fontproperties=mf, fontsize=16)
+    # 设置x轴标注
+    plt.xlabel(u"时间(秒)", fontproperties=mf)
+    # 设置y轴标注
+    plt.ylabel(u"道路流量(辆)", fontproperties=mf)
+    plt.xlim((0, len(x)+1))
+    plt.ylim((0, max(y)+1))
+
+    plt.plot(x, y)
+    plt.savefig(base_path + "/temp/edge_id_%d" % (de.edge_id) + ".png")
+    plt.clf()
 
 if __name__ == "__main__":
     pass
