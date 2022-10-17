@@ -68,14 +68,11 @@ class Edge():
         self.terminal_node_id = input_item.terminal_node_id
         self.free_flow_time = input_item.free_flow_time
         self.road_length = input_item.road_length
-        # self.desired_travel_time = input_item.desired_travel_time
-        # self.max_travel_time = input_item.max_travel_time
-        self.free_flow_speed = input_item.free_flow_speed
-        # self.desired_speed = input_item.desired_speed
-        # self.min_speed = input_item.min_speed
+        self.free_flow_speed = input_item.free_flow_speed   # 单位:km/h
+        self.car_pass_time = input_item.car_pass_time
+        self.car_depart_num = input_item.car_depart_num
         self.road_max_capacity = input_item.road_max_capacity
         self.lane_num = input_item.lane_num
-        self.car_interval = None    # 车辆在该条路上出发的间隔，
 
         self.alpha = 0.61
         self.beta = 1.653

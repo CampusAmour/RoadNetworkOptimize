@@ -170,39 +170,26 @@ class TrafficMainWindow():
         # thread = BackgroundThread()
         # thread.run(self.)
 
-    def _greedyGenerateCarDepartureTime(self, graph, cars, rate, system_time, start_time, total_road_pipelines=None,
-                                       current_road_pipelines=None, is_departure=None):
+    def _greedyGenerateCarDepartureTime(self, graph, cars, rate, start_time):
         """
             Desc: 贪心算法生成车辆离开的时间
         """
+        system_time = 1
         all_car_pass_max_time = 0
         # fill_amount = 100
-        if system_time == 1:
-            random.shuffle(cars)
+        random.shuffle(cars)
         operate_graph = copy.deepcopy(graph)
         # 记录累计道路容量
-        if total_road_pipelines == None:
-            total_road_pipelines = [[0] for _ in range(operate_graph.edge_num + 1)]
+        total_road_pipelines = [[0] for _ in range(operate_graph.edge_num + 1)]
         # 记录当前道路容量
-        if current_road_pipelines == None:
-            current_road_pipelines = [[0] for _ in range(operate_graph.edge_num + 1)]
+        current_road_pipelines = [[0] for _ in range(operate_graph.edge_num + 1)]
 
         road_current_accumulate = [.0] * (operate_graph.edge_num + 1)
         road_acc_amount = [0] * (operate_graph.edge_num + 1)
         for _, edge in operate_graph.edge_table.items():
-            road_acc_amount[edge.edge_id] = edge.road_max_capacity / 3600
-        for _ in range(system_time - 1):
-            roadAccumulate(road_current_accumulate, road_acc_amount)
-
-        if is_departure == None:
-            carReadyGoNum = len(cars)
-            is_departure = [False] * (len(cars) + 1)
-        else:
-            carReadyGoNum = 0
-            for i in range(1, len(cars) + 1):
-                if is_departure[i] == False:
-                    carReadyGoNum += 1
-            print("carReadyGoNum:", carReadyGoNum)
+            road_acc_amount[edge.edge_id] = edge.car_depart_num
+        carReadyGoNum = len(cars)
+        is_departure = [False] * (len(cars) + 1)
 
         while carReadyGoNum > 0:
             # print("system time: %d, car ready go number: %d." % (system_time, carReadyGoNum))
@@ -211,10 +198,6 @@ class TrafficMainWindow():
             # road acc
             roadAccumulate(road_current_accumulate, road_acc_amount)
             # print(road_current_accumulate)
-
-            # last_carReadyGoNum = carReadyGoNum
-            is_full_lane = False
-            lanes = graph.getRoadLaneNum()
 
             for i in range(len(cars)):
                 if carReadyGoNum == 0:
@@ -240,11 +223,7 @@ class TrafficMainWindow():
                         drive_road = graph.getEdgeByOriginAndTerminalNodeId(cars[i].actual_path[j],
                                                                             cars[i].actual_path[j + 1])
                         drive_road_index = drive_road.edge_id
-                        if (j == 0) and (lanes[drive_road_index] == 0):
-                            is_full_lane = True
-                            break
                         # 根据道路容量bpr函数计算车辆通行时间
-                        # Todo: 信号灯
                         drive_road_capacity = getCurrentRoadCapacity(current_road_pipelines, drive_road_index,
                                                                      road_current_accumulate[drive_road_index],
                                                                      car_drive_time)
@@ -277,14 +256,10 @@ class TrafficMainWindow():
                         if all_car_pass_max_time < car_drive_time:
                             all_car_pass_max_time = car_drive_time
                         carReadyGoNum -= 1
-                        lanes[graph.getEdgeByOriginAndTerminalNodeId(cars[i].actual_path[0],
-                                                                     cars[i].actual_path[1]).edge_id] -= 1
                         # print("    car id: %d, departure time: %d, arrived time: %d, number %d short path" % (cars[i].car_id, system_time, time, k+1), end=", ")
                         # print("drive path:", cars[i].actual_path)
                         break
 
-                    if is_full_lane == True:
-                        break
                     # 拿到了time和road_pipeline
                     res, _, mid_path = changeDrivePath(graph, current_road_pipelines, road_current_accumulate,
                                                        block_time, cars[i].start_node_id, cars[i].terminal_node_id,
@@ -341,7 +316,7 @@ class TrafficMainWindow():
         end_time = time.time()
         self.sendMsgToRuntimeText("create cars spend time: %d\n" % (end_time - start_time))
         current_road_pipelines, total_road_pipelines, max_length = self._greedyGenerateCarDepartureTime(graph, cars,
-                                                                                                  data["road_rate"], 1,
+                                                                                                  data["road_rate"],
                                                                                                   start_time)
         print("max_length:", max_length)
         # ### wirte data ###
