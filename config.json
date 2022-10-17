@@ -7,6 +7,5 @@
     "epoch": 10,
     "k_path_num": 20,
     "road_rate": 0.8,
-    "carbody_length": 4,
-    "car_average_length": 4
+    "carbody_avg_len": 5
 }

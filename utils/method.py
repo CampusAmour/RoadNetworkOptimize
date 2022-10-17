@@ -567,6 +567,18 @@ def fillRoadInfo(road_accumulate_capacity_path, road_current_capacity_path, edge
             return None, None
     return current_road_pipelines, total_road_pipelines
 
+def uniformDistribute(displayEdges: list, t: int, factor: int) -> (list, list):
+    edgeSize, edgeColor = [], []
+    for de in displayEdges:
+        crowdRate = de.capacity_with_time[t - 1] / de.capacity
+        edgeSize.append(crowdRate * factor + 1)
+        if crowdRate > 0.7:
+            edgeColor.append("red")
+        elif crowdRate > 0.35:
+            edgeColor.append("yellow")
+        else:
+            edgeColor.append("green")
+    return edgeSize, edgeColor
 
 if __name__ == "__main__":
     pass

@@ -10,9 +10,9 @@ Time   : 2022/10/5 19:33
 import os
 import threading
 from PyQt5 import uic
-from PyQt5.QtCore import Qt, QThread
-from PyQt5.QtWidgets import QFileDialog, QMessageBox, QPushButton, QTableWidgetItem
-from PyQt5.QtGui import QPixmap, QTextCursor
+from PyQt5.QtCore import QThread, Qt
+from PyQt5.QtWidgets import QFileDialog, QMessageBox, QPushButton, QTableWidgetItem, QGraphicsPixmapItem, QGraphicsScene
+from PyQt5.QtGui import QPixmap, QTextCursor, QImage
 from utils.draw import DrawGraph, drawEdgeCapacityWithTime
 from utils.process import parseJsonFile
 from utils.build import createGraph, createCars
@@ -24,8 +24,9 @@ from utils.model import DisplayEdge
 class TrafficMainWindow():
     def __init__(self, last_window, base_path, roadFilePath, carFilePath):
         self.base_path = base_path
-        self.ui = uic.loadUi(base_path + "/utils/traffic_main_window.ui")
+        self.ui = uic.loadUi(base_path + "/material/traffic_main_window.ui")
         self.last_ui = last_window
+        self.setUIStyleSheet()
         self.ui.backHomeBut.clicked.connect(self.backHome)
 
         self.roadFilePath = roadFilePath
@@ -34,9 +35,9 @@ class TrafficMainWindow():
         # draw graph
         self.dw = DrawGraph(self.base_path, self.roadFilePath)
         self.dw.drawBaseRoad()
-        self.ui.baseRoadLabel.setPixmap(QPixmap(self.base_path + "/temp/base_road_graph.png"))
-        self.ui.baseRoadLabel.setText("")
-        self.ui.baseRoadLabel.setObjectName("道路信息图")
+        scene = QGraphicsScene()
+        scene.addItem(QGraphicsPixmapItem(QPixmap.fromImage(QImage(self.base_path + "/temp/base_road_graph.png"))))
+        self.ui.baseRoadView.setScene(scene)
 
         # fill table
         self.cars = generateCars(self.carFilePath)
@@ -47,8 +48,8 @@ class TrafficMainWindow():
         self.ui.runBut.clicked.connect(self.switchThread)
 
         # edge
-        self.ui.chooseEdgeBox.currentIndexChanged.connect(self._showEdgeCapacityWithTime)
-        # self.ui.chooseTimeBox.currentIndexChanged.connect(self.xxx)
+        self.ui.chooseRoadBox.currentIndexChanged.connect(self._showRoadCapacityTrendWithTime)
+        self.ui.chooseTimeBox.currentIndexChanged.connect(self._showRoadCapacityByTime)
 
         self.isRunFinish = False
 
@@ -80,7 +81,6 @@ class TrafficMainWindow():
             item.setTextAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
             self.ui.carTable.setItem(index, 3, item)
 
-
     def showCarRuntimeInfo(self, item=None):
         if item == None:
             # print("table item empty")
@@ -93,9 +93,10 @@ class TrafficMainWindow():
         car = self.cars[item.row()]
         if os.path.exists(self.base_path + "/temp/carid_%s_trace_graph.png" % (str(car.car_id))) == False:
             self.dw.drawDriveRoadByCar(car)
-        self.ui.carTraceLabel.setPixmap(QPixmap(self.base_path + "/temp/carid_%s_trace_graph.png" % str(car.car_id)))
-        self.ui.carTraceLabel.setText("")
-        self.ui.carTraceLabel.setObjectName("车辆id[%s]行驶轨迹图" % str(car.car_id))
+
+        scene = QGraphicsScene()
+        scene.addItem(QGraphicsPixmapItem(QPixmap.fromImage(QImage(self.base_path+"/temp/carid_%s_trace_graph.png" % str(car.car_id)))))
+        self.ui.carTraceView.setScene(scene)
 
         print("车辆id:%d\n"
               "在时刻[%d]从节点[%d]出发\n"
@@ -112,29 +113,47 @@ class TrafficMainWindow():
                                       car.terminal_node_id, "->".join([str(node_id) for node_id in car.actual_path]),
                                       car.arrived_time-car.departure_time))
 
-    def _loadEdgeInfo(self):
+    def _loadRoadInfo(self):
         roadInfoPath = self.base_path + "/temp/road_cars_result_" + str(self.totalTime) + ".xlsx"
         df = pd.DataFrame(pd.read_excel(roadInfoPath))
         self.displayEdges = []
-        edge_titles = []
-        # print(self.totalTime)
+        road_titles = []
         for index, row in df.iterrows():
-            edge_titles.append("道路编号%d[%d->%d]" % (int(row[0]), int(row[1]), int(row[2])))
-            self.displayEdges.append(DisplayEdge(int(row[0]), int(row[1]), int(row[2]), row[4:]))
+            road_titles.append("道路编号%d[%d->%d]" % (int(row[0]), int(row[1]), int(row[2])))
+            self.displayEdges.append(DisplayEdge(int(row[0]), int(row[1]), int(row[2]), int(row[3]), row[4:]))
         # drawEdgeCapacityWithTime(self.displayEdges[0], self.base_path)
         for de in self.displayEdges:
             drawEdgeCapacityWithTime(de, self.base_path)
-        self.ui.chooseEdgeBox.addItems(edge_titles)
+        self.ui.chooseRoadBox.addItems(road_titles)
 
-    def _showEdgeCapacityWithTime(self):
-        chooseIndex = self.ui.chooseEdgeBox.currentIndex()
+        time_titles = []
+        print("totalTime:", self.totalTime)
+        for i in range(self.totalTime-1):
+            time_titles.append("时刻%d" % (i + 1))
+        self.ui.chooseTimeBox.addItems(time_titles)
+
+    def _showRoadCapacityTrendWithTime(self):
+        chooseIndex = self.ui.chooseRoadBox.currentIndex()
         print("current choose index: %d." % chooseIndex)
         if (chooseIndex == 0) or (chooseIndex > len(self.displayEdges)):
             return
 
-        self.ui.edgeCapacityTrendLabel.setPixmap(QPixmap(self.base_path + "/temp/edge_id_%d" % (chooseIndex) + ".png"))
-        self.ui.edgeCapacityTrendLabel.setText("")
-        self.ui.edgeCapacityTrendLabel.setObjectName("道路容量变化图")
+        scene = QGraphicsScene()
+        scene.addItem(QGraphicsPixmapItem(
+            QPixmap.fromImage(QImage(self.base_path + "/temp/edge_id_%d" % (chooseIndex) + ".png"))))
+        self.ui.roadCapacityTrendView.setScene(scene)
+
+    def _showRoadCapacityByTime(self):
+        chooseTime = self.ui.chooseTimeBox.currentIndex()
+        if (chooseTime == 0) or (chooseTime > self.totalTime):
+            return
+        print("current choose time: %d." % chooseTime)
+
+        self.dw.drawDriveRoadByTime(self.displayEdges, chooseTime)
+        scene = QGraphicsScene()
+        scene.addItem(QGraphicsPixmapItem(
+            QPixmap.fromImage(QImage(self.base_path + "/temp/road_capacity_time_%s_graph.png" % (str(chooseTime))))))
+        self.ui.timeCapacityView.setScene(scene)
 
     def sendMsgToRuntimeText(self, msg="\n"):
         self.ui.showRuntimeText.moveCursor(QTextCursor.End)
@@ -336,7 +355,7 @@ class TrafficMainWindow():
         print("total spend time:", time.time() - start_time)
 
         # 加载边信息
-        self._loadEdgeInfo()
+        self._loadRoadInfo()
 
     def removeFolder(self, path):
         if os.path.isdir(path):
@@ -348,10 +367,14 @@ class TrafficMainWindow():
             if os.path.exists(path):
                 os.remove(path)
 
+    def setUIStyleSheet(self):
+        # 设置窗口透明度
+        self.ui.setWindowOpacity(0.93)
+        self.ui.setWindowFlag(Qt.FramelessWindowHint)
+
     def backHome(self):
         if os.path.exists(self.base_path + "/temp"):
             self.removeFolder(self.base_path + "/temp")
-        print("#########")
         self.last_ui.show()
         self.ui.close()
         print("返回成功...")
@@ -360,7 +383,8 @@ class TrafficLoadWindow():
     def __init__(self, base_path):
         # 从文件中加载UI定义
         self.base_path = base_path
-        self.ui = uic.loadUi(base_path + "/utils/traffic_load_window.ui")
+        self.ui = uic.loadUi(base_path + "/material/traffic_load_window.ui")
+        self.setUIStyleSheet()
 
         self.roadFilePath = ""
         self.carFilePath = ""
@@ -414,6 +438,11 @@ class TrafficLoadWindow():
 
         self.main_window = TrafficMainWindow(self.ui, self.base_path, self.roadFilePath, self.carFilePath)
         self.main_window.ui.show()
+    def setUIStyleSheet(self):
+        # 设置窗口透明度
+        self.ui.setWindowOpacity(0.93)
+        # self.ui.setAttribute(Qt.WA_TranslucentBackground)
+        self.ui.setWindowFlag(Qt.FramelessWindowHint)
 
 
 # TODO: QThread后台执行(需解决循环调用)

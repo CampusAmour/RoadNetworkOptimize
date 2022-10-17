@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from matplotlib import font_manager
 
 import utils.model
+from utils import method
 from utils.process import readRoadInfo
 
 class DrawGraph():
@@ -43,18 +44,19 @@ class DrawGraph():
 
     def drawBaseRoad(self):
         self.graph.es["color"] = "black"
-        self.graph.es["width"] = 1.2
+        self.graph.es["width"] = 1
 
         # Plot graph
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=(5.5, 5.5))
         ig.plot(
             self.graph,
             target=ax,
-            vertex_size=0.6,
+            vertex_size=0.3,
             vertex_color="lightblue",
             vertex_label=[v[1] for v in sorted(self.id_to_name.items(), key=lambda x: x[0])],
+            # edge_label=[str(edge[0]) for edge in self.edges],
             edge_lty="solid",
-            edge_curved=0.3,
+            edge_curved=0.1,
             layout=self.graph.layout("kk")
         )
         # plt.show()
@@ -64,36 +66,29 @@ class DrawGraph():
         fig.savefig(self.base_path + "/temp/base_road_graph.png", bbox_inches='tight', pad_inches=-0.1)
 
     def drawDriveRoadByCar(self, car):
-        print(car.actual_path)
-        print(car.edge_actual_path)
         self.graph.es["color"] = "black"
-        self.graph.es["width"] = 1.2
-
-        # print("vertex count:", self.graph.vcount())
+        self.graph.es["width"] = 1
 
         walk_node_list = [0] * self.graph.vcount() # 节点数量
         color_dict = {0: "lightblue", 1: "red"}
 
-
         for node_id in car.actual_path:
-            # print("node_id = %d, id = %d" % (node_id, self.name_to_id[node_id]))
             walk_node_list[self.name_to_id[node_id]] = 1
-        # print(walk_node_list)
-
 
         for edge_id in car.edge_actual_path:
             self.graph.es[edge_id-1]["color"] = "red"
 
         # Plot graph
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=(5.5, 5.5))
         ig.plot(
             self.graph,
             target=ax,
-            vertex_size=0.6,
+            vertex_size=0.3,
             vertex_color=[color_dict[val] for val in walk_node_list],
             vertex_label=[v[1] for v in sorted(self.id_to_name.items(), key=lambda x: x[0])],
+            # edge_label=[edge[0] for edge in self.edges],
             edge_lty="solid",
-            edge_curved=0.3,
+            edge_curved=0.1,
             layout=self.graph.layout("kk")
         )
         # plt.show()
@@ -102,14 +97,49 @@ class DrawGraph():
 
         fig.savefig(self.base_path + "/temp/carid_%s_trace_graph.png" % (str(car.car_id)), bbox_inches='tight', pad_inches=-0.1)
 
+    def drawDriveRoadByTime(self, displayEdges, t):
+        edgeSize, edgeColor = method.uniformDistribute(displayEdges, t, 5)
+        print("edgeSize:", edgeSize)
+        print(len(displayEdges[0].capacity_with_time))
+        self.graph.es["color"] = "black"
+        self.graph.es["width"] = 6
+
+        # walk_node_list = [0] * self.graph.vcount()  # 节点数量
+        # color_dict = {0: "lightblue", 1: "red"}
+        #
+        # for node_id in car.actual_path:
+        #     walk_node_list[self.name_to_id[node_id]] = 1
+        #
+        # for edge_id in car.edge_actual_path:
+        #     self.graph.es[edge_id - 1]["color"] = "red"
+
+        # Plot graph
+        fig, ax = plt.subplots(figsize=(5.5, 5.5))
+        ig.plot(
+            self.graph,
+            target=ax,
+            vertex_size=0.3,
+            vertex_color="lightblue",
+            vertex_label=[v[1] for v in sorted(self.id_to_name.items(), key=lambda x: x[0])],
+            edge_width=edgeSize,
+            edge_color=edgeColor,
+            edge_lty="solid",
+            edge_curved=0.1,
+            layout=self.graph.layout("kk")
+        )
+        # plt.show()
+        if not os.path.exists(self.base_path + "/temp"):
+            os.mkdir(self.base_path + "/temp")
+
+        fig.savefig(self.base_path + "/temp/road_capacity_time_%s_graph.png" % (str(t)), bbox_inches='tight',
+                    pad_inches=-0.1)
+
+
 def drawEdgeCapacityWithTime(de: utils.model.DisplayEdge, base_path):
-    print(de.edge_id)
-    if de.edge_id <= 2:
-        print(de.capacity_with_time)
     y = de.capacity_with_time
     x = [i+1 for i in range(len(de.capacity_with_time))]
 
-    mf = font_manager.FontProperties(fname=base_path+"/tool/simsun.ttc")
+    mf = font_manager.FontProperties(fname=base_path+"/material/simsun.ttc")
 
     # 设置标题
     plt.title(u"道路编号%d[%d->%d]流量变化图" % (de.edge_id, de.origin_node_id, de.terminal_node_id), fontproperties=mf, fontsize=16)

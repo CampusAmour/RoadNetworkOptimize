@@ -188,22 +188,23 @@ class Graph():
 
 
 class InputItem():
-    def __init__(self, row_item):
+    def __init__(self, row_item, carbody_avg_len):
         # 0-边id, 1-路段, 2-自由流时间, 3-道路容量
         self.edge_id = int(row_item[0])
         nodes = row_item[1].split('-')
         self.origin_node_id = int(nodes[0])
         self.terminal_node_id = int(nodes[1])
         self.free_flow_time = float(row_item[2])
-        self.road_max_capacity = int(row_item[3])
-        self.road_length = float(row_item[4])
-        # self.desired_travel_time = float(row_item[5])
-        # self.max_travel_time = float(row_item[6])
-        # self.free_flow_speed = float(row_item[7])
-        # self.desired_speed = float(row_item[8])
-        # self.min_speed = float(row_item[9])
-        self.free_flow_speed = float(row_item[5])
-        self.lane_num = int(row_item[6])
+        self.road_length = float(row_item[3])
+        self.lane_num = int(row_item[4])
+        self.free_flow_speed = self.road_length / self.free_flow_time * 3600    # 单位:km/h
+        self.car_pass_time = (int(self.free_flow_speed / 10) + carbody_avg_len) / self.free_flow_speed * 3.6    #单位s
+        self.car_depart_num = 1 / self.car_pass_time * self.lane_num  # 单位:辆/s
+        self.road_max_capacity = int(self.free_flow_time * self.car_pass_time) * self.lane_num
+
+        print("carbody_avg_len:", carbody_avg_len, " free_flow_speed:", self.free_flow_speed,
+              "car_pass_time:", self.car_pass_time, " car_depart_num:", self.car_depart_num,
+              " road_max_capacity:", self.road_max_capacity)
 
 
 class Simulator():
@@ -264,11 +265,12 @@ class Simulator():
         return True, road_pipelines, max_time
 
 class DisplayEdge():
-    def __init__(self, edge_id, origin_node_id, terminal_node_id, capacity_with_time):
+    def __init__(self, edge_id, origin_node_id, terminal_node_id, capacity, capacity_with_time):
         # 0-边id, 1-路段, 2-自由流时间, 3-道路容量
         self.edge_id = edge_id
         self.origin_node_id = origin_node_id
         self.terminal_node_id = terminal_node_id
+        self.capacity = capacity
         self.capacity_with_time = [int(item) for item in capacity_with_time]
 
     def __str__(self):

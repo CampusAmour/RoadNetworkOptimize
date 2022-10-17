@@ -8,6 +8,8 @@ Time   : 2022/3/2 12:55
 Desc   : 读取输入数据
 """
 import json
+import os
+
 import pandas as pd
 from utils.model import InputItem, Car
 
@@ -15,10 +17,11 @@ from utils.model import InputItem, Car
 def readRoadInfo(path):
     df = pd.DataFrame(pd.read_excel(path))
     input_items = []
+    datas = parseJsonFile(os.getcwd() + "/config.json")
     for index, row in df.iterrows():
         if index == 0:
             continue
-        input_items.append(InputItem(row))
+        input_items.append(InputItem(row, datas["carbody_avg_len"]))
     return input_items
 
 
